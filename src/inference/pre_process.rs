@@ -162,8 +162,6 @@ pub fn raw_to_img(im: &RawImage) -> GrayImage {
         let pixel = (p * 255.0) as u32;
         let pixel: u8 = if pixel > 255 {
             255
-        } else if pixel < 0 {
-            0
         } else {
             pixel as u8
         };
@@ -183,8 +181,6 @@ pub fn uint8_raw_to_img(im: &RawImage) -> GrayImage {
         let pixel =  data[index] as u32;
         let pixel: u8 = if pixel > 255 {
             255
-        } else if pixel < 0 {
-            0
         } else {
             pixel as u8
         };

@@ -6,6 +6,10 @@ Yet Another Genshin Impact Scanner
 
 </div>
 
+## Fork
+
+加了点没啥用的修改
+
 ## 介绍
 基于SVTR（基本上是MobileNetV3_Small + Transformer）字符识别模型，使用原神字体对原神中会出现的字符串进行训练，达到更高的速度和更精确的结果。相比CRNN，SVTR可以达到更小的体积及更好的识别率  
 导出结果可以导入分析工具（例如 [莫娜占卜铺](https://mona-uranai.com/) ）进行配装或者其他计算  

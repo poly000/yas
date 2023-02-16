@@ -22,6 +22,91 @@ use image::{ImageBuffer, Pixel};
 use log::{info, warn, LevelFilter};
 use os_info;
 
+#[cfg(windows)]
+fn detect_gi_window() -> (PixelRect, bool) {
+    let rect: PixelRect;
+    let is_cloud: bool;
+    use winapi::shared::windef::DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE;
+    use winapi::um::wingdi::{GetDeviceCaps, HORZRES};
+    use winapi::um::winuser::{
+        GetDpiForSystem, GetSystemMetrics, SetForegroundWindow, SetProcessDPIAware,
+        SetThreadDpiAwarenessContext, ShowWindow, SW_RESTORE, SW_SHOW,
+    };
+    // use winapi::um::shellscalingapi::{SetProcessDpiAwareness, PROCESS_PER_MONITOR_DPI_AWARE};
+
+    crate::utils::set_dpi_awareness();
+
+    let hwnd = match utils::find_window_local() {
+        Ok(h) => {
+            is_cloud = false;
+            h
+        }
+        Err(_) => match utils::find_window_cloud() {
+            Ok(h) => {
+                is_cloud = true;
+                h
+            }
+            Err(_) => utils::error_and_quit("未找到原神窗口，请确认原神已经开启"),
+        },
+    };
+
+    unsafe {
+        ShowWindow(hwnd, SW_RESTORE);
+    }
+    // utils::sleep(1000);
+    unsafe {
+        SetForegroundWindow(hwnd);
+    }
+    utils::sleep(1000);
+
+    rect = utils::get_client_rect(hwnd).unwrap();
+}
+
+#[cfg(all(target_os = "linux"))]
+fn detect_gi_window() -> (PixelRect, bool) {
+    let rect: PixelRect;
+    let is_cloud: bool;
+    let window_id = unsafe {
+        String::from_utf8_unchecked(
+            std::process::Command::new("sh")
+                .arg("-c")
+                .arg(r#" xwininfo|grep "Window id"|cut -d " " -f 4 "#)
+                .output()
+                .unwrap()
+                .stdout,
+        )
+    };
+    let window_id = window_id.trim_end_matches("\n");
+
+    let position_size = unsafe {
+        String::from_utf8_unchecked(
+                std::process::Command::new("sh")
+                    .arg("-c")
+                    .arg(&format!(r#" xwininfo -id {window_id}|cut -f 2 -d :|tr -cd "0-9\n"|grep -v "^$"|sed -n "1,2p;5,6p" "#))
+                    .output()
+                    .unwrap()
+                    .stdout,
+            )
+    };
+
+    let mut info = position_size.split("\n");
+
+    let left = info.next().unwrap().parse().unwrap();
+    let top = info.next().unwrap().parse().unwrap();
+    let width = info.next().unwrap().parse().unwrap();
+    let height = info.next().unwrap().parse().unwrap();
+
+    rect = PixelRect {
+        left,
+        top,
+        width,
+        height,
+    };
+    is_cloud = false; // todo: detect cloud genshin by title
+
+    (rect, is_cloud)
+}
+
 fn open_local(path: String) -> RawImage {
     let img = image::open(path).unwrap();
     let img = grayscale(&img);
@@ -141,85 +226,7 @@ fn main() {
 
     let rect: PixelRect;
     let is_cloud: bool;
-
-    #[cfg(windows)]
-    {
-        use winapi::shared::windef::DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE;
-        use winapi::um::wingdi::{GetDeviceCaps, HORZRES};
-        use winapi::um::winuser::{
-            GetDpiForSystem, GetSystemMetrics, SetForegroundWindow, SetProcessDPIAware,
-            SetThreadDpiAwarenessContext, ShowWindow, SW_RESTORE, SW_SHOW,
-        };
-        // use winapi::um::shellscalingapi::{SetProcessDpiAwareness, PROCESS_PER_MONITOR_DPI_AWARE};
-
-        crate::utils::set_dpi_awareness();
-
-        let hwnd = match utils::find_window_local() {
-            Ok(h) => {
-                is_cloud = false;
-                h
-            }
-            Err(_) => match utils::find_window_cloud() {
-                Ok(h) => {
-                    is_cloud = true;
-                    h
-                }
-                Err(_) => utils::error_and_quit("未找到原神窗口，请确认原神已经开启"),
-            },
-        };
-
-        unsafe {
-            ShowWindow(hwnd, SW_RESTORE);
-        }
-        // utils::sleep(1000);
-        unsafe {
-            SetForegroundWindow(hwnd);
-        }
-        utils::sleep(1000);
-
-        rect = utils::get_client_rect(hwnd).unwrap();
-    }
-
-    #[cfg(all(target_os = "linux"))]
-    {
-        let window_id = unsafe {
-            String::from_utf8_unchecked(
-                std::process::Command::new("sh")
-                    .arg("-c")
-                    .arg(r#" xwininfo|grep "Window id"|cut -d " " -f 4 "#)
-                    .output()
-                    .unwrap()
-                    .stdout,
-            )
-        };
-        let window_id = window_id.trim_end_matches("\n");
-
-        let position_size = unsafe {
-            String::from_utf8_unchecked(
-                std::process::Command::new("sh")
-                    .arg("-c")
-                    .arg(&format!(r#" xwininfo -id {window_id}|cut -f 2 -d :|tr -cd "0-9\n"|grep -v "^$"|sed -n "1,2p;5,6p" "#))
-                    .output()
-                    .unwrap()
-                    .stdout,
-            )
-        };
-
-        let mut info = position_size.split("\n");
-
-        let left = info.next().unwrap().parse().unwrap();
-        let top = info.next().unwrap().parse().unwrap();
-        let width = info.next().unwrap().parse().unwrap();
-        let height = info.next().unwrap().parse().unwrap();
-
-        rect = PixelRect {
-            left,
-            top,
-            width,
-            height,
-        };
-        is_cloud = false; // todo: detect cloud genshin by title
-    }
+    (rect, is_cloud) = detect_gi_window();
 
     // rect.scale(1.25);
     info!(
@@ -269,17 +276,17 @@ fn main() {
         Some("mona") => {
             let output_filename = output_dir.join("mona.json");
             let mona = MonaFormat::new(&results);
-            mona.save(String::from(output_filename.to_str().unwrap()));
+            mona.save(output_filename.to_str().unwrap());
         }
         Some("mingyulab") => {
             let output_filename = output_dir.join("mingyulab.json");
             let mingyulab = MingyuLabFormat::new(&results);
-            mingyulab.save(String::from(output_filename.to_str().unwrap()));
+            mingyulab.save(output_filename.to_str().unwrap());
         }
         Some("good") => {
             let output_filename = output_dir.join("good.json");
             let good = GOODFormat::new(&results);
-            good.save(String::from(output_filename.to_str().unwrap()));
+            good.save(output_filename.to_str().unwrap());
         }
         _ => unreachable!(),
     }

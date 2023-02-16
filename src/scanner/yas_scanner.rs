@@ -441,7 +441,7 @@ impl YasScanner {
     }
 
     fn capture_panel(&mut self) -> Result<RawCaptureImage, String> {
-        let now = SystemTime::now();
+        // let now = SystemTime::now();
         let w = self.info.panel_position.right - self.info.panel_position.left;
         let h = self.info.panel_position.bottom - self.info.panel_position.top;
         let rect: PixelRect = PixelRect {
@@ -471,7 +471,7 @@ impl YasScanner {
         let color_4 = Color::from(161, 86, 224);
         let color_5 = Color::from(188, 105, 50);
 
-        let mut min_dis: u32 = color_1.dis_2(&color);
+        let min_dis: u32 = color_1.dis_2(&color);
         let mut star = 1_u32;
         if color_2.dis_2(&color) < min_dis {
             star = 2;
@@ -490,7 +490,7 @@ impl YasScanner {
     }
 
     fn start_capture_only(&mut self) {
-        fs::create_dir("captures");
+        fs::create_dir("captures").unwrap();
         let info = &self.info.clone();
 
         let count = self.info.art_count_position.capture_relative(info).unwrap();

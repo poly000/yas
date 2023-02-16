@@ -1,8 +1,8 @@
 use std::convert::From;
 use std::fs::File;
 use std::io::prelude::*;
-use rand::thread_rng;
-use rand::Rng;
+// use rand::thread_rng;
+// use rand::Rng;
 
 use serde::ser::{Serialize, Serializer, SerializeMap};
 use tract_onnx::prelude::tract_itertools::Itertools;
@@ -102,8 +102,8 @@ impl ArtifactSlot {
 impl Serialize for ArtifactStat {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         let mut root = serializer.serialize_map(Some(2))?;
-        root.serialize_entry("name", &self.name.to_mona());
-        root.serialize_entry("value", &self.value);
+        root.serialize_entry("name", &self.name.to_mona())?;
+        root.serialize_entry("value", &self.value)?;
         root.end()
     }
 }
@@ -112,9 +112,9 @@ impl Serialize for MonaArtifact {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         let mut root = serializer.serialize_map(Some(7))?;
 
-        root.serialize_entry("setName", &self.set_name.to_mona());
-        root.serialize_entry("position", &self.slot.to_mona());
-        root.serialize_entry("mainTag", &self.main_stat);
+        root.serialize_entry("setName", &self.set_name.to_mona())?;
+        root.serialize_entry("position", &self.slot.to_mona())?;
+        root.serialize_entry("mainTag", &self.main_stat)?;
 
         let mut sub_stats: Vec<&ArtifactStat> = vec![];
         if let Some(ref s) = self.sub_stat_1 {
@@ -137,10 +137,10 @@ impl Serialize for MonaArtifact {
         // subs.end();
         // subs.
 
-        root.serialize_entry("normalTags", &sub_stats);
-        root.serialize_entry("omit", &false);
-        root.serialize_entry("level", &self.level);
-        root.serialize_entry("star", &self.star);
+        root.serialize_entry("normalTags", &sub_stats)?;
+        root.serialize_entry("omit", &false)?;
+        root.serialize_entry("level", &self.level)?;
+        root.serialize_entry("star", &self.star)?;
 
         let equip = match self.equip {
             Some(ref x) => {
@@ -154,8 +154,8 @@ impl Serialize for MonaArtifact {
             },
             None => String::new(),
         };
-        root.serialize_entry("equip", &equip);
-        let random_id = thread_rng().gen::<u64>();
+        root.serialize_entry("equip", &equip)?;
+        // let random_id = thread_rng().gen::<u64>();
         // root.serialize_entry("id", &random_id);
 
         root.end()
@@ -174,12 +174,12 @@ pub struct MonaFormat<'a> {
 impl<'a> Serialize for MonaFormat<'a> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         let mut root = serializer.serialize_map(Some(6))?;
-        root.serialize_entry("version", &self.version);
-        root.serialize_entry("flower", &self.flower);
-        root.serialize_entry("feather", &self.feather);
-        root.serialize_entry("sand", &self.sand);
-        root.serialize_entry("cup", &self.cup);
-        root.serialize_entry("head", &self.head);
+        root.serialize_entry("version", &self.version)?;
+        root.serialize_entry("flower", &self.flower)?;
+        root.serialize_entry("feather", &self.feather)?;
+        root.serialize_entry("sand", &self.sand)?;
+        root.serialize_entry("cup", &self.cup)?;
+        root.serialize_entry("head", &self.head)?;
         root.end()
     }
 }
@@ -213,8 +213,8 @@ impl<'a> MonaFormat<'a> {
         }
     }
 
-    pub fn save(&self, path: String) {
-        let mut file = match File::create(&path) {
+    pub fn save(&self, path: &str) {
+        let mut file = match File::create(path) {
             Err(why) => panic!("couldn't create {}: {}", path, why),
             Ok(file) => file,
         };

@@ -179,7 +179,7 @@ impl<'a> GOODFormat<'a> {
         }
     }
 
-    pub fn save(&self, path: String) {
+    pub fn save(&self, path: &str) {
         let mut file = match File::create(&path) {
             Err(why) => panic!("couldn't create {}: {}", path, why),
             Ok(file) => file,

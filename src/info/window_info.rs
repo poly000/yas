@@ -1,5 +1,3 @@
-use std::borrow::Borrow;
-use std::ops::{Div, Mul};
 use crate::common::PixelRectBound;
 use crate::info::info::ScanInfo;
 
