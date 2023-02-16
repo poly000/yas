@@ -212,7 +212,7 @@ fn main() {
                 .short("f")
                 .takes_value(true)
                 .help("输出格式")
-                .possible_values(&["mona", "mingyulab", "good"])
+                .possible_values(&["mona", "mingyulab", "good", "all"])
                 .default_value("mona"),
         )
         .arg(
@@ -272,23 +272,22 @@ fn main() {
     info!("time: {}s", t);
 
     let output_dir = Path::new(matches.value_of("output-dir").unwrap());
-    match matches.value_of("output-format") {
-        Some("mona") => {
-            let output_filename = output_dir.join("mona.json");
-            let mona = MonaFormat::new(&results);
-            mona.save(output_filename.to_str().unwrap());
+
+    if let Some(output_format) = matches.value_of("output-format") {
+        let filename = output_dir.join(format!("{output_format}.json"));
+        let filename = filename.to_str().unwrap();
+
+        match output_format {
+            "mona" => MonaFormat::new(&results).save(filename),
+            "mingyulab" => MingyuLabFormat::new(&results).save(filename),
+            "good" => GOODFormat::new(&results).save(filename),
+            "all" => {
+                MonaFormat::new(&results).save(filename);
+                MingyuLabFormat::new(&results).save(filename);
+                GOODFormat::new(&results).save(filename);
+            }
+            _ => unreachable!(""),
         }
-        Some("mingyulab") => {
-            let output_filename = output_dir.join("mingyulab.json");
-            let mingyulab = MingyuLabFormat::new(&results);
-            mingyulab.save(output_filename.to_str().unwrap());
-        }
-        Some("good") => {
-            let output_filename = output_dir.join("good.json");
-            let good = GOODFormat::new(&results);
-            good.save(output_filename.to_str().unwrap());
-        }
-        _ => unreachable!(),
     }
     // let info = info;
     // let img = info.art_count_position.capture_relative(&info).unwrap();
